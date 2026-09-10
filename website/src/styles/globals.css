@@ -1,0 +1,78 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(139, 107, 255, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(62, 230, 208, 0.12), transparent 55%),
+    radial-gradient(800px 500px at 50% 120%, rgba(79, 123, 255, 0.1), transparent 55%),
+    #05070d;
+  color: #e2e8f0;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+@layer components {
+  .glass-panel {
+    @apply relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-glass;
+  }
+  .glass-panel-strong {
+    @apply relative rounded-2xl border border-white/[0.08] bg-void-900/70 backdrop-blur-2xl shadow-glass;
+  }
+  .glass-btn {
+    @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-2.5 text-sm font-medium text-slate-200 backdrop-blur-md transition-all hover:bg-white/[0.09] hover:border-white/20 active:scale-[0.98];
+  }
+  .glass-btn-primary {
+    @apply inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-aegis-cyan to-aegis-blue px-5 py-3 text-sm font-semibold text-void-950 shadow-glow transition-all hover:brightness-110 hover:shadow-glow-lg active:scale-[0.98];
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-300;
+  }
+  .section-eyebrow {
+    @apply mb-3 inline-flex items-center gap-2 rounded-full border border-aegis-cyan/20 bg-aegis-cyan/[0.06] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-aegis-cyan;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-br from-white via-slate-100 to-slate-400 bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+}

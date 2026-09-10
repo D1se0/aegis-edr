@@ -1,0 +1,17 @@
+node_modules/
+dist/
+dist-electron/
+release/
+build/Output/
+.next/
+out/
+*.log
+.DS_Store
+.env
+.env.local
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+.cache/
+coverage/

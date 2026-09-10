@@ -1,0 +1,104 @@
+{
+  "name": "aegis-edr",
+  "productName": "Aegis EDR",
+  "version": "0.1.0",
+  "description": "Aegis EDR — plataforma profesional de deteccion y respuesta en el endpoint (procesos, red, integridad de ficheros, persistencia y bloqueo activo).",
+  "author": "Aegis EDR",
+  "homepage": "https://github.com/D1se0/aegis-edr",
+  "license": "MIT",
+  "main": "dist-electron/main/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron:dev": "npm run build && electron .",
+    "dist:linux": "npm run build && electron-builder --linux deb AppImage",
+    "dist:win": "npm run build && electron-builder --win nsis portable",
+    "dist:mac": "npm run build && electron-builder --mac dmg zip",
+    "dist:all": "npm run build && electron-builder -mwl"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.3.4",
+    "systeminformation": "^5.23.5",
+    "chokidar": "^3.6.0",
+    "ps-list": "^8.1.1",
+    "sudo-prompt": "^9.2.1",
+    "zustand": "^4.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "framer-motion": "^11.3.28",
+    "recharts": "^2.12.7",
+    "lucide-react": "^0.427.0",
+    "clsx": "^2.1.1",
+    "@fontsource/inter": "^5.0.20",
+    "@fontsource/jetbrains-mono": "^5.0.21"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^20.14.15",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "electron": "^31.3.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.9",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "vite-plugin-electron": "^0.28.8",
+    "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.aegisedr.app",
+    "productName": "Aegis EDR",
+    "copyright": "Aegis EDR",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "release"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "D1se0",
+        "repo": "aegis-edr"
+      }
+    ],
+    "linux": {
+      "target": [
+        { "target": "deb", "arch": ["x64"] },
+        { "target": "AppImage", "arch": ["x64"] }
+      ],
+      "category": "Security",
+      "icon": "build/icon.png",
+      "maintainer": "Aegis EDR"
+    },
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        { "target": "dmg", "arch": ["x64", "arm64"] },
+        { "target": "zip", "arch": ["x64", "arm64"] }
+      ],
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "name": "aegis-edr-website",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Sitio oficial de Aegis EDR: presentacion, funciones y descargas.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "dev:server": "node server/index.js",
+    "dev:all": "concurrently -n web,api -c cyan,magenta \"npm:dev\" \"npm:dev:server\"",
+    "build": "vite build",
+    "preview": "vite preview --port 5174",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "framer-motion": "^11.3.28",
+    "lucide-react": "^0.427.0",
+    "clsx": "^2.1.1",
+    "@fontsource/inter": "^5.0.20",
+    "@fontsource/jetbrains-mono": "^5.0.21"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/node": "^20.14.15",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.9",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.0",
+    "concurrently": "^8.2.2"
+  }
+}
