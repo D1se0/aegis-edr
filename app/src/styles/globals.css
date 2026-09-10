@@ -1,0 +1,70 @@
+@import '@fontsource/inter/400.css';
+@import '@fontsource/inter/500.css';
+@import '@fontsource/inter/600.css';
+@import '@fontsource/inter/700.css';
+@import '@fontsource/inter/800.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/600.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(139, 107, 255, 0.16), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(62, 230, 208, 0.12), transparent 55%),
+    #05070d;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+@layer components {
+  .glass-panel {
+    @apply relative rounded-2xl border border-white/10 bg-white/[0.04] backdrop-blur-xl shadow-glass;
+  }
+  .glass-panel-strong {
+    @apply relative rounded-2xl border border-white/[0.08] bg-void-900/70 backdrop-blur-2xl shadow-glass;
+  }
+  .glass-btn {
+    @apply inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3.5 py-2 text-sm font-medium text-slate-200 backdrop-blur-md transition-all hover:bg-white/[0.09] hover:border-white/20 active:scale-[0.98];
+  }
+  .glass-btn-primary {
+    @apply inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-aegis-cyan to-aegis-blue px-3.5 py-2 text-sm font-semibold text-void-950 shadow-glow transition-all hover:brightness-110 active:scale-[0.98];
+  }
+  .glass-btn-danger {
+    @apply inline-flex items-center gap-2 rounded-xl border border-aegis-red/30 bg-aegis-red/10 px-3.5 py-2 text-sm font-semibold text-aegis-red backdrop-blur-md transition-all hover:bg-aegis-red/20 active:scale-[0.98];
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide;
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-400 transition-all hover:text-slate-100 hover:bg-white/[0.05];
+  }
+  .sidebar-link-active {
+    @apply text-slate-50 bg-white/[0.08] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)];
+  }
+}
