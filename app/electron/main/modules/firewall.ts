@@ -50,6 +50,9 @@ function buildUnblockCommand(ip: string): string {
 }
 
 export async function blockIp(ip: string, reason: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isValidIp(ip)) {
+    return { ok: false, error: 'Direccion IP con formato invalido.' }
+  }
   if (blockedIps.has(ip)) return { ok: true }
   if (isPrivateOrLoopback(ip)) {
     return { ok: false, error: 'No se bloquean direcciones locales/privadas para evitar cortar la conectividad del equipo.' }
@@ -70,6 +73,9 @@ export async function blockIp(ip: string, reason: string): Promise<{ ok: boolean
 }
 
 export async function unblockIp(ip: string): Promise<{ ok: boolean; error?: string }> {
+  if (!isValidIp(ip)) {
+    return { ok: false, error: 'Direccion IP con formato invalido.' }
+  }
   const result = await runElevated(buildUnblockCommand(ip))
   if (result.ok) blockedIps.delete(ip)
   return result
@@ -130,6 +136,16 @@ export async function restoreNetwork(): Promise<{ ok: boolean; error?: string }>
     })
   }
   return result
+}
+
+const IPV4_RE = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/
+const IPV6_RE = /^[0-9a-fA-F:]+$/
+
+/** Valida que la cadena sea una IPv4/IPv6 con forma correcta antes de interpolarla en un comando de shell elevado. */
+function isValidIp(ip: string): boolean {
+  const m = ip.match(IPV4_RE)
+  if (m) return m.slice(1, 5).every((octet) => Number(octet) <= 255)
+  return ip.includes(':') && IPV6_RE.test(ip)
 }
 
 function isPrivateOrLoopback(ip: string): boolean {

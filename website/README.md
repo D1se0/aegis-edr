@@ -1,14 +1,28 @@
 # Aegis EDR — sitio web
 
-Landing oficial de Aegis EDR: presentacion, funciones y descargas. Frontend en React + Vite +
-Tailwind. El propio frontend consulta directamente la API publica de GitHub
-(`GET https://api.github.com/repos/<owner>/<repo>/releases/latest`, cacheada 5 min en
-`sessionStorage`) para resolver los instaladores disponibles — por eso funciona igual como sitio
-100% estatico (GitHub Pages) que detras de un servidor propio.
+Landing oficial de Aegis EDR (`/`) mas una seccion completa de documentacion navegable (`/docs`),
+en React + Vite + Tailwind + `react-router-dom`. El propio frontend consulta directamente la API
+publica de GitHub (`GET https://api.github.com/repos/<owner>/<repo>/releases/latest`, cacheada 5
+min en `sessionStorage`) para resolver los instaladores disponibles — por eso funciona igual como
+sitio 100% estatico (GitHub Pages) que detras de un servidor propio.
 
 Ademas se incluye un pequeño servidor Express (`server/index.js`) opcional para quien quiera
 auto-hospedar el sitio (sirve `dist/` y expone `GET /api/releases/latest` como proxy cacheado
 del lado servidor).
+
+## Seccion /docs
+
+`src/docs/content.ts` contiene todo el contenido de la documentacion (un array de secciones con
+bloques tipados: parrafo, lista, codigo, aviso, tabla). `src/pages/DocsPage.tsx` renderiza el
+sidebar de navegacion y el contenido segun el slug de la URL (`/docs/:slug`). Para añadir o
+editar una seccion basta con tocar `content.ts` — no hace falta tocar el layout.
+
+Como GitHub Pages sirve el sitio de forma 100% estatica, una recarga directa en `/docs/algo` (o
+compartir ese enlace) pasa primero por `public/404.html`, que codifica la ruta real como query
+string y redirige a `index.html`; un script en `index.html` la decodifica con
+`history.replaceState` antes de que React monte, para que `react-router` reciba la URL correcta.
+Es el patron estandar [spa-github-pages](https://github.com/rafgraph/spa-github-pages)
+— `pathSegmentsToKeep = 1` en `404.html` porque el sitio vive bajo `/aegis-edr/`.
 
 ## GitHub Pages
 

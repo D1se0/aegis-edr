@@ -1,23 +1,21 @@
+import { Route, Routes } from 'react-router-dom'
 import { Navbar } from '@/components/Navbar'
-import { Hero } from '@/components/Hero'
-import { Protection } from '@/components/Protection'
-import { Features } from '@/components/Features'
-import { Downloads } from '@/components/Downloads'
-import { Install } from '@/components/Install'
-import { GithubBanner } from '@/components/GithubBanner'
 import { Footer } from '@/components/Footer'
+import Home from '@/pages/Home'
+import DocsPage from '@/pages/DocsPage'
+import NotFound from '@/pages/NotFound'
 
 export default function App() {
   return (
     <div className="relative min-h-screen overflow-x-hidden">
       <Navbar />
       <main>
-        <Hero />
-        <Protection />
-        <Features />
-        <Downloads />
-        <Install />
-        <GithubBanner />
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/docs" element={<DocsPage />} />
+          <Route path="/docs/:slug" element={<DocsPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </main>
       <Footer />
     </div>

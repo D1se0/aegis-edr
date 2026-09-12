@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ShieldHalf, Github } from 'lucide-react'
 import { GITHUB_URL } from '@/lib/site'
 
@@ -13,10 +14,11 @@ export function Footer() {
         </div>
 
         <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500">
-          <a href="#proteccion" className="hover:text-slate-200">Proteccion</a>
-          <a href="#funciones" className="hover:text-slate-200">Funciones</a>
-          <a href="#descargas" className="hover:text-slate-200">Descargas</a>
-          <a href="#instalacion" className="hover:text-slate-200">Instalacion</a>
+          <a href="/#proteccion" className="hover:text-slate-200">Proteccion</a>
+          <a href="/#funciones" className="hover:text-slate-200">Funciones</a>
+          <a href="/#descargas" className="hover:text-slate-200">Descargas</a>
+          <a href="/#instalacion" className="hover:text-slate-200">Instalacion</a>
+          <Link to="/docs" className="hover:text-slate-200">Docs</Link>
           <a href={GITHUB_URL} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1.5 hover:text-slate-200">
             <Github className="h-4 w-4" /> GitHub
           </a>

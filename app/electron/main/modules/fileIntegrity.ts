@@ -6,8 +6,9 @@ import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { FileEvent, HostsFileStatus } from '../../shared/types'
-import { scoreFileEvent, severityFromScore } from './threatEngine'
+import { scoreFileEvent, severityFromScore, severityMeetsThreshold } from './threatEngine'
 import { raiseAlert } from './alerts'
+import { quarantineFile } from './quarantine'
 import { getSettings } from './store'
 import { logger } from './logger'
 
@@ -120,14 +121,23 @@ export function startFileIntegrityMonitor() {
           message: `Se han modificado ${BURST_THRESHOLD}+ ficheros en ${watchPaths.join(', ')} en menos de ${BURST_WINDOW_MS / 1000}s. Se recomienda aislar el equipo de la red inmediatamente.`,
           sourceId: path
         })
+        if (settings.protection.autoBlock && severityMeetsThreshold('critical', settings.autoBlockSeverity) && (type === 'add' || type === 'change')) {
+          const result = quarantineFile(path, `Bloqueo automatico: posible rafaga de ransomware en ${watchPaths.join(', ')}.`)
+          if (!result.ok) logger.warn('fileIntegrity', `Cuarentena automatica fallida para ${path}`, result.error)
+        }
       } else if (riskScore >= 45) {
+        const severity = severityFromScore(riskScore)
         raiseAlert({
-          severity: severityFromScore(riskScore),
+          severity,
           category: 'filesystem',
           title: 'Fichero sospechoso detectado',
           message: `${riskReasons.join('. ')}: ${path}`,
           sourceId: path
         })
+        if (settings.protection.autoBlock && severityMeetsThreshold(severity, settings.autoBlockSeverity) && (type === 'add' || type === 'change')) {
+          const result = quarantineFile(path, `Bloqueo automatico: fichero de severidad ${severity} (${riskReasons.join('. ')}).`)
+          if (!result.ok) logger.warn('fileIntegrity', `Cuarentena automatica fallida para ${path}`, result.error)
+        }
       }
     }
 
