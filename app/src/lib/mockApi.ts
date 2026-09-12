@@ -132,7 +132,7 @@ export const defaultSettings: AppSettings = {
   watchPaths: [],
   cpuAlertThreshold: 85,
   connectionsPerMinuteThreshold: 40,
-  autoBlockSeverity: 'off',
+  autoBlockSeverity: 'critical',
   updateChannel: 'stable',
   telemetryOptIn: false
 }

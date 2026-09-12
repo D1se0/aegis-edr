@@ -1,8 +1,8 @@
 import si from 'systeminformation'
 import type { NetworkConnection } from '../../shared/types'
-import { scoreConnection, severityFromScore } from './threatEngine'
+import { scoreConnection, severityFromScore, severityMeetsThreshold } from './threatEngine'
 import { raiseAlert } from './alerts'
-import { isIpBlocked } from './firewall'
+import { isIpBlocked, blockIp } from './firewall'
 import { getSettings } from './store'
 import { logger } from './logger'
 
@@ -63,13 +63,21 @@ export async function pollConnections(): Promise<NetworkConnection[]> {
         const last = alertedRecently.get(key) || 0
         if (Date.now() - last < ALERT_COOLDOWN_MS) continue
         alertedRecently.set(key, Date.now())
+        const severity = severityFromScore(conn.riskScore)
         raiseAlert({
-          severity: severityFromScore(conn.riskScore),
+          severity,
           category: 'network',
           title: `Conexion sospechosa hacia ${conn.remoteAddress}:${conn.remotePort}`,
           message: `${conn.riskReasons.join('. ')}. Proceso: ${conn.processName} (PID ${conn.pid}).`,
           sourceId: conn.id
         })
+
+        if (settings.protection.autoBlock && severityMeetsThreshold(severity, settings.autoBlockSeverity) && !isIpBlocked(conn.remoteAddress)) {
+          blockIp(
+            conn.remoteAddress,
+            `Bloqueo automatico: conexion de severidad ${severity} desde/hacia el proceso ${conn.processName} (PID ${conn.pid}).`
+          ).catch((err) => logger.error('networkMonitor', 'Fallo en bloqueo automatico de IP', String(err)))
+        }
       }
     }
 

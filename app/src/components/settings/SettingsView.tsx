@@ -35,7 +35,7 @@ export function SettingsView() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-slate-300">Canal: <span className="font-semibold text-slate-100">{settings.updateChannel}</span></p>
-            <p className="mt-1 text-xs text-slate-500">Version actual 0.1.0</p>
+            <p className="mt-1 text-xs text-slate-500">Version actual {__APP_VERSION__}</p>
           </div>
           <button onClick={handleCheckUpdates} disabled={checking} className="glass-btn-primary text-xs">
             {checking ? 'Buscando...' : 'Buscar actualizaciones'}

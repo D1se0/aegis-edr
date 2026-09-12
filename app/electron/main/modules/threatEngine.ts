@@ -163,6 +163,14 @@ export function severityFromScore(score: number): Severity {
   return 'info'
 }
 
+const SEVERITY_RANK: Record<Severity, number> = { info: 0, low: 1, medium: 2, high: 3, critical: 4 }
+
+/** Compara una severidad de alerta contra el umbral configurado para auto-bloqueo ('off' desactiva siempre). */
+export function severityMeetsThreshold(severity: Severity, threshold: Severity | 'off'): boolean {
+  if (threshold === 'off') return false
+  return SEVERITY_RANK[severity] >= SEVERITY_RANK[threshold]
+}
+
 export function computeSecurityScore(alerts: Alert[]): { score: number; label: 'Excelente' | 'Bueno' | 'En riesgo' | 'Critico' } {
   const active = alerts.filter((a) => !a.acknowledged)
   const weight: Record<Severity, number> = { critical: 28, high: 16, medium: 8, low: 3, info: 0 }

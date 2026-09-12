@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ShieldHalf, Github, Menu, X } from 'lucide-react'
 import { GITHUB_URL } from '@/lib/site'
 
 const LINKS = [
-  { href: '#proteccion', label: 'Proteccion' },
-  { href: '#funciones', label: 'Funciones' },
-  { href: '#descargas', label: 'Descargas' },
-  { href: '#instalacion', label: 'Instalacion' }
+  { href: '/#proteccion', label: 'Proteccion' },
+  { href: '/#funciones', label: 'Funciones' },
+  { href: '/#descargas', label: 'Descargas' },
+  { href: '/#instalacion', label: 'Instalacion' }
 ]
 
 export function Navbar() {
@@ -27,14 +28,14 @@ export function Navbar() {
       }`}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8">
-        <a href="#top" className="flex items-center gap-2.5 font-bold text-slate-50">
+        <Link to="/" className="flex items-center gap-2.5 font-bold text-slate-50">
           <span className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-aegis-cyan to-aegis-blue text-void-950 shadow-glow">
             <ShieldHalf className="h-5 w-5" strokeWidth={2.5} />
           </span>
           <span className="text-lg tracking-tight">
             Aegis <span className="text-aegis-cyan">EDR</span>
           </span>
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-1 md:flex">
           {LINKS.map((link) => (
@@ -46,6 +47,12 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
+          <Link
+            to="/docs"
+            className="rounded-lg px-3.5 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-white/[0.05] hover:text-slate-100"
+          >
+            Docs
+          </Link>
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
@@ -58,7 +65,7 @@ export function Navbar() {
             <Github className="h-4 w-4" />
             GitHub
           </a>
-          <a href="#descargas" className="glass-btn-primary">
+          <a href="/#descargas" className="glass-btn-primary">
             Descargar
           </a>
         </div>
@@ -85,6 +92,13 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
+            <Link
+              to="/docs"
+              onClick={() => setOpen(false)}
+              className="rounded-lg px-3 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/[0.05]"
+            >
+              Docs
+            </Link>
             <a
               href={GITHUB_URL}
               target="_blank"
@@ -93,7 +107,7 @@ export function Navbar() {
             >
               GitHub
             </a>
-            <a href="#descargas" onClick={() => setOpen(false)} className="glass-btn-primary mt-2 justify-center">
+            <a href="/#descargas" onClick={() => setOpen(false)} className="glass-btn-primary mt-2 justify-center">
               Descargar
             </a>
           </nav>

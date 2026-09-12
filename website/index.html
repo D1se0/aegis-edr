@@ -9,12 +9,29 @@
       content="Aegis EDR: proteccion profesional en tiempo real para Windows, Linux y macOS. Deteccion de procesos maliciosos, bloqueo de red, integridad de ficheros y respuesta automatica ante amenazas."
     />
     <meta name="theme-color" content="#05070d" />
+    <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta property="og:title" content="Aegis EDR — Deteccion y respuesta en el endpoint" />
     <meta
       property="og:description"
       content="Monitorizacion en tiempo real, bloqueo automatico y respuesta ante amenazas. Disponible para Windows, Linux y macOS."
     />
     <meta property="og:type" content="website" />
+    <script type="text/javascript">
+      // Decodifica la ruta reescrita por public/404.html (ver ese fichero) antes de que
+      // React monte, para que react-router reciba la URL real (p.ej. /aegis-edr/docs/dashboard).
+      ;(function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&')
+            })
+            .join('?')
+          window.history.replaceState(null, '', l.pathname.slice(0, -1) + decoded + l.hash)
+        }
+      })(window.location)
+    </script>
   </head>
   <body>
     <div id="root"></div>
