@@ -1,7 +1,7 @@
 {
   "name": "aegis-edr",
   "productName": "Aegis EDR",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Aegis EDR — plataforma profesional de deteccion y respuesta en el endpoint (procesos, red, integridad de ficheros, persistencia y bloqueo activo).",
   "author": "Aegis EDR",
   "homepage": "https://github.com/D1se0/aegis-edr",

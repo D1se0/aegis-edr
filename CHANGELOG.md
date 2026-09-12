@@ -3,6 +3,16 @@
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Este proyecto
 sigue [SemVer](https://semver.org/lang/es/).
 
+## [0.3.1] - 2026-09-12
+
+### Corregido
+- **Enlaces de navegacion rotos en la web (404 de GitHub Pages)**: `Navbar.tsx` y `Footer.tsx`
+  usaban anclas absolutas (`href="/#descargas"`, etc.). Como el sitio se sirve bajo
+  `/aegis-edr/` y no en la raiz del dominio, ese enlace navegaba a
+  `https://d1se0.github.io/#seccion` (la raiz de Pages del usuario, inexistente) en vez de
+  quedarse dentro del sitio — un 404 de GitHub. Corregido prefijando cada ancla con
+  `import.meta.env.BASE_URL` en vez de un `/` literal.
+
 ## [0.3.0] - 2026-09-12
 
 ### Añadido — Asistente IA

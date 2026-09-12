@@ -3,11 +3,13 @@ import { Link } from 'react-router-dom'
 import { ShieldHalf, Github, Menu, X } from 'lucide-react'
 import { GITHUB_URL } from '@/lib/site'
 
+const BASE = import.meta.env.BASE_URL
+
 const LINKS = [
-  { href: '/#proteccion', label: 'Proteccion' },
-  { href: '/#funciones', label: 'Funciones' },
-  { href: '/#descargas', label: 'Descargas' },
-  { href: '/#instalacion', label: 'Instalacion' }
+  { href: `${BASE}#proteccion`, label: 'Proteccion' },
+  { href: `${BASE}#funciones`, label: 'Funciones' },
+  { href: `${BASE}#descargas`, label: 'Descargas' },
+  { href: `${BASE}#instalacion`, label: 'Instalacion' }
 ]
 
 export function Navbar() {
@@ -65,7 +67,7 @@ export function Navbar() {
             <Github className="h-4 w-4" />
             GitHub
           </a>
-          <a href="/#descargas" className="glass-btn-primary">
+          <a href={`${BASE}#descargas`} className="glass-btn-primary">
             Descargar
           </a>
         </div>
@@ -107,7 +109,7 @@ export function Navbar() {
             >
               GitHub
             </a>
-            <a href="/#descargas" onClick={() => setOpen(false)} className="glass-btn-primary mt-2 justify-center">
+            <a href={`${BASE}#descargas`} onClick={() => setOpen(false)} className="glass-btn-primary mt-2 justify-center">
               Descargar
             </a>
           </nav>
