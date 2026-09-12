@@ -69,7 +69,8 @@
       {
         "provider": "github",
         "owner": "D1se0",
-        "repo": "aegis-edr"
+        "repo": "aegis-edr",
+        "releaseType": "release"
       }
     ],
     "linux": {
