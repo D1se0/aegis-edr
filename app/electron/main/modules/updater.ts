@@ -4,6 +4,7 @@ import type { BrowserWindow } from 'electron'
 import { IPC } from '../../shared/types'
 import type { UpdateStatus } from '../../shared/types'
 import { logger } from './logger'
+import { recordSelfNetworkCall } from './selfTelemetry'
 
 export function initUpdater(win: BrowserWindow) {
   autoUpdater.autoDownload = false
@@ -13,7 +14,10 @@ export function initUpdater(win: BrowserWindow) {
     if (!win.isDestroyed()) win.webContents.send(IPC.onUpdateStatus, status)
   }
 
-  autoUpdater.on('checking-for-update', () => send({ status: 'checking' }))
+  autoUpdater.on('checking-for-update', () => {
+    recordSelfNetworkCall('github.com/D1se0/aegis-edr/releases', 'Comprobacion de actualizaciones')
+    send({ status: 'checking' })
+  })
   autoUpdater.on('update-available', (info) => {
     send({ status: 'available', version: info.version })
     autoUpdater.downloadUpdate()

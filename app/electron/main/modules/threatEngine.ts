@@ -1,4 +1,4 @@
-import type { Alert, Severity } from '../../shared/types'
+import type { Alert, ScoreExplanation, Severity } from '../../shared/types'
 
 /**
  * Motor de reglas heuristicas. No sustituye a firmas/EDR kernel-level: opera en
@@ -181,6 +181,61 @@ export function computeSecurityScore(alerts: Alert[]): { score: number; label: '
   else if (score < 70) label = 'En riesgo'
   else if (score < 90) label = 'Bueno'
   return { score, label }
+}
+
+/** Mapeo heuristica -> tecnica de MITRE ATT&CK (aproximado; no sustituye un mapeo formal). */
+const MITRE_KEYWORDS: Array<{ match: RegExp; technique: string }> = [
+  { match: /minero de criptomonedas|CPU anormalmente alto/i, technique: 'T1496' }, // Resource Hijacking
+  { match: /herramienta ofensiva/i, technique: 'T1588.002' }, // Tool
+  { match: /imita un proceso del sistema/i, technique: 'T1036.005' }, // Masquerading: Match Legitimate Name
+  { match: /ruta temporal|apariencia generada/i, technique: 'T1036' }, // Masquerading
+  { match: /privilegios elevados/i, technique: 'T1548' }, // Abuse Elevation Control Mechanism
+  { match: /shells reversas|C2/i, technique: 'T1071' }, // Application Layer Protocol
+  { match: /servicio sensible expuesto/i, technique: 'T1021' }, // Remote Services
+  { match: /escaneo de puertos/i, technique: 'T1046' }, // Network Service Discovery
+  { match: /comando ofuscado|codificado en base64/i, technique: 'T1027' }, // Obfuscated Files or Information
+  { match: /descarga contenido remoto/i, technique: 'T1105' }, // Ingress Tool Transfer
+  { match: /autoarranque|persistencia/i, technique: 'T1547' }, // Boot or Logon Autostart Execution
+  { match: /ransomware|rafaga de modificaciones/i, technique: 'T1486' }, // Data Encrypted for Impact
+  { match: /fichero critico del sistema|hosts/i, technique: 'T1565' }, // Data Manipulation
+  { match: /honeytoken|senuelo/i, technique: 'T1083' }, // File and Directory Discovery
+  { match: /nunca visto antes|no visto previamente/i, technique: 'T1071' },
+  { match: /powershell|mshta|rundll32|certutil|LOLBin/i, technique: 'T1218' } // System Binary Proxy Execution
+]
+
+/** Deriva las tecnicas MITRE ATT&CK aplicables a partir de las razones de riesgo textuales. */
+export function mapReasonsToMitre(reasons: string[]): string[] {
+  const set = new Set<string>()
+  for (const reason of reasons) {
+    for (const k of MITRE_KEYWORDS) {
+      if (k.match.test(reason)) set.add(k.technique)
+    }
+  }
+  return Array.from(set)
+}
+
+/** Desglose transparente de que contribuye al score actual, no solo el numero final. */
+export function explainScore(alerts: Alert[]): ScoreExplanation {
+  const active = alerts.filter((a) => !a.acknowledged)
+  const weight: Record<Severity, number> = { critical: 28, high: 16, medium: 8, low: 3, info: 0 }
+  const byGroup = new Map<string, { impact: number; count: number }>()
+
+  for (const a of active) {
+    const w = weight[a.severity]
+    if (w <= 0) continue
+    const key = `${a.category} · ${a.severity}`
+    const entry = byGroup.get(key) || { impact: 0, count: 0 }
+    entry.impact += w
+    entry.count += 1
+    byGroup.set(key, entry)
+  }
+
+  const factors = Array.from(byGroup.entries())
+    .map(([label, v]) => ({ label, impact: v.impact, count: v.count }))
+    .sort((a, b) => b.impact - a.impact)
+
+  const { score, label } = computeSecurityScore(alerts)
+  return { score, scoreLabel: label, factors }
 }
 
 function isPrivateOrLoopback(ip: string): boolean {

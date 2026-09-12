@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Ban, Search, Skull, Wifi } from 'lucide-react'
+import { Ban, Search, Skull, Terminal, Wifi } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { GlassCard, GlassCardHeader } from '@/components/ui/GlassCard'
 import clsx from 'clsx'
@@ -72,8 +72,15 @@ export function ProcessesView() {
             {processes.map((p) => (
               <tr key={p.pid} className={clsx('transition-colors hover:bg-white/[0.03]', p.riskScore >= 45 && 'bg-aegis-red/[0.04]')}>
                 <td className="max-w-[280px] px-4 py-2.5">
-                  <p className="truncate font-medium text-slate-200">{p.name}</p>
-                  <p className="truncate text-xs text-slate-500">{p.path || 'ruta desconocida'}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate font-medium text-slate-200">{p.name}</p>
+                    {p.riskReasons.some((r) => r.includes('LOLBin')) && (
+                      <span title="Binario living-off-the-land usado con parametros sospechosos" className="badge shrink-0 bg-aegis-amber/15 text-aegis-amber ring-1 ring-inset ring-aegis-amber/30">
+                        <Terminal size={10} /> LOLBin
+                      </span>
+                    )}
+                  </div>
+                  <p data-sensitive="true" className="truncate text-xs text-slate-500">{p.path || 'ruta desconocida'}</p>
                 </td>
                 <td className="px-4 py-2.5 tabular-nums text-slate-400">{p.pid}</td>
                 <td className="px-4 py-2.5 text-slate-400">{p.user}</td>

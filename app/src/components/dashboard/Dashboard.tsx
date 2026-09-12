@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Cpu, HardDrive, MemoryStick, Radar, ScanLine, ShieldOff, Siren, Wifi } from 'lucide-react'
+import { Activity, AlertOctagon, Copy, Cpu, HardDrive, MemoryStick, Radar, ScanLine, ShieldOff, Siren, Wifi } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
+import { getAegisApi } from '@/lib/ipcClient'
 import { GlassCard, GlassCardHeader } from '@/components/ui/GlassCard'
 import { ScoreGauge } from '@/components/ui/ScoreGauge'
 import { StatTile } from '@/components/ui/StatTile'
 import { MiniArea } from '@/components/ui/MiniArea'
 import { Toggle } from '@/components/ui/Toggle'
 import { SeverityBadge } from '@/components/ui/SeverityBadge'
+import { ThreatRadarMini } from '@/components/dashboard/ThreatRadarMini'
+import { ScoreExplainModal } from '@/components/dashboard/ScoreExplainModal'
 import type { ProtectionState } from '@shared/types'
+
+function glowColorForScore(score: number) {
+  if (score >= 90) return 'rgba(51, 227, 154, 0.10)'
+  if (score >= 70) return 'rgba(62, 230, 208, 0.10)'
+  if (score >= 40) return 'rgba(255, 184, 79, 0.12)'
+  return 'rgba(255, 84, 112, 0.14)'
+}
 
 const PROTECTION_LABELS: Record<keyof ProtectionState, { label: string; description: string }> = {
   realtimeMonitoring: { label: 'Monitorizacion en tiempo real', description: 'Vigila procesos, red y ficheros de forma continua' },
@@ -38,6 +48,9 @@ export function Dashboard() {
   const isolateHost = useAppStore((s) => s.isolateHost)
   const [scanning, setScanning] = useState(false)
   const [isolating, setIsolating] = useState(false)
+  const [triggeringIncident, setTriggeringIncident] = useState(false)
+  const [scoreModalOpen, setScoreModalOpen] = useState(false)
+  const [badgeCopied, setBadgeCopied] = useState(false)
 
   const cpuHistory = useHistory(snapshot?.vitals.cpuLoad)
   const memHistory = useHistory(snapshot?.vitals.memUsedPct)
@@ -62,11 +75,40 @@ export function Dashboard() {
     setTimeout(() => setIsolating(false), 1600)
   }
 
+  const handleIncidentMode = async () => {
+    if (!window.confirm('El Modo Incidente aislara la red, finalizara los procesos criticos y generara un paquete de evidencia. ¿Continuar?')) return
+    setTriggeringIncident(true)
+    await getAegisApi().triggerIncidentMode('Modo Incidente activado manualmente desde el Dashboard')
+    setTimeout(() => setTriggeringIncident(false), 1600)
+  }
+
+  const handleCopyBadge = async () => {
+    const svg = await getAegisApi().getScoreBadgeSvg()
+    try {
+      await navigator.clipboard.writeText(svg)
+      setBadgeCopied(true)
+      setTimeout(() => setBadgeCopied(false), 2000)
+    } catch {
+      // clipboard puede fallar sin permisos; no es critico
+    }
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+    <div className="relative">
+      <div
+        className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] blur-3xl transition-colors duration-1000"
+        style={{ background: glowColorForScore(snapshot.score) }}
+      />
+      <ScoreExplainModal open={scoreModalOpen} onClose={() => setScoreModalOpen(false)} />
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
       <GlassCard strong className="xl:col-span-1">
         <div className="flex flex-col items-center gap-4 py-2">
-          <ScoreGauge score={snapshot.score} label={snapshot.scoreLabel} />
+          <button onClick={() => setScoreModalOpen(true)} className="rounded-full transition-transform hover:scale-[1.02]" title="Ver desglose de la puntuacion">
+            <ScoreGauge score={snapshot.score} label={snapshot.scoreLabel} />
+          </button>
+          <button onClick={handleCopyBadge} className="glass-btn !px-2.5 !py-1 text-[11px]">
+            <Copy size={12} /> {badgeCopied ? 'Insignia copiada' : 'Copiar insignia SVG'}
+          </button>
           <div className="flex w-full items-center justify-around border-t border-white/[0.06] pt-4 text-center">
             <div>
               <p className="text-lg font-bold text-slate-100">{snapshot.processes.length}</p>
@@ -92,6 +134,23 @@ export function Dashboard() {
             </button>
           </div>
         </div>
+      </GlassCard>
+
+      <GlassCard className="flex flex-col items-center justify-center gap-2">
+        <GlassCardHeader title="Radar de amenazas" icon={<Radar size={16} />} />
+        <ThreatRadarMini alerts={snapshot.alerts} />
+      </GlassCard>
+
+      <GlassCard strong className="flex flex-col justify-center xl:col-span-2">
+        <GlassCardHeader
+          title="Modo Incidente"
+          subtitle="Aisla la red, finaliza procesos criticos y genera un paquete de evidencia completo en un clic"
+          icon={<AlertOctagon size={16} />}
+        />
+        <button onClick={handleIncidentMode} disabled={triggeringIncident} className="glass-btn-danger w-full justify-center !py-3 text-sm">
+          <AlertOctagon size={18} />
+          {triggeringIncident ? 'Activando Modo Incidente...' : 'Activar Modo Incidente'}
+        </button>
       </GlassCard>
 
       <div className="grid grid-cols-2 gap-4 xl:col-span-2">
@@ -143,6 +202,7 @@ export function Dashboard() {
           </div>
         )}
       </GlassCard>
+      </div>
     </div>
   )
 }

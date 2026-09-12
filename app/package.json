@@ -1,7 +1,7 @@
 {
   "name": "aegis-edr",
   "productName": "Aegis EDR",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Aegis EDR — plataforma profesional de deteccion y respuesta en el endpoint (procesos, red, integridad de ficheros, persistencia y bloqueo activo).",
   "author": "Aegis EDR",
   "homepage": "https://github.com/D1se0/aegis-edr",
@@ -22,6 +22,8 @@
     "release:mac": "npm run build && electron-builder --mac dmg zip --publish always"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "archiver": "^7.0.1",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.3.4",
     "systeminformation": "^5.23.5",
@@ -39,6 +41,7 @@
     "@fontsource/jetbrains-mono": "^5.0.21"
   },
   "devDependencies": {
+    "@types/archiver": "^6.0.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/node": "^20.14.15",

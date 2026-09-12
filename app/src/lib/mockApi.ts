@@ -8,7 +8,17 @@ import type {
   QuarantineItem,
   SecuritySnapshot,
   Severity,
-  UsbDevice
+  UsbDevice,
+  AiSettings,
+  AiChatMessage,
+  AiStreamDelta,
+  AiConfirmationRequest,
+  ScoreExplanation,
+  HoneytokenFile,
+  FileBackupEntry,
+  BrowserExtensionInfo,
+  PlaybookRule,
+  SelfNetworkLogEntry
 } from '@shared/types'
 import type { AegisApi, ActionResult } from './ipcClient'
 
@@ -116,7 +126,8 @@ function initialSnapshot(settings: AppSettings): SecuritySnapshot {
     fileEvents,
     usbEvents,
     protection: settings.protection,
-    lastScan: new Date().toISOString()
+    lastScan: new Date().toISOString(),
+    incidents: []
   }
 }
 
@@ -134,7 +145,11 @@ export const defaultSettings: AppSettings = {
   connectionsPerMinuteThreshold: 40,
   autoBlockSeverity: 'critical',
   updateChannel: 'stable',
-  telemetryOptIn: false
+  telemetryOptIn: false,
+  honeytokensEnabled: true,
+  backupBeforeChange: true,
+  webhookUrl: null,
+  webhookFormat: 'generic'
 }
 
 export function createMockApi(): AegisApi {
@@ -200,6 +215,60 @@ export function createMockApi(): AegisApi {
   ensureTimers()
 
   const ok: ActionResult = { ok: true }
+
+  // --- Estado mock para las nuevas secciones (IA, incidentes, honeytokens, backups, etc.) ---
+  let aiSettings: AiSettings = { hasApiKey: false, keyStorageEncrypted: false, model: 'claude-opus-5', autonomousMode: false }
+  let aiHistory: AiChatMessage[] = []
+  const aiStreamListeners = new Set<(d: AiStreamDelta) => void>()
+  const aiConfirmationListeners = new Set<(r: AiConfirmationRequest) => void>()
+
+  let playbooks: PlaybookRule[] = [
+    {
+      id: nextId(),
+      name: 'Bloquear IPs criticas automaticamente',
+      enabled: true,
+      condition: { category: 'network', minSeverity: 'critical' },
+      action: 'block_ip',
+      createdAt: new Date().toISOString(),
+      timesTriggered: 3
+    }
+  ]
+
+  const honeytokens: HoneytokenFile[] = [
+    { path: '~/Desktop/passwords.xlsx', createdAt: new Date().toISOString(), triggered: false },
+    { path: '~/Documents/aws_credentials.json', createdAt: new Date().toISOString(), triggered: false }
+  ]
+
+  const fileBackups: FileBackupEntry[] = [
+    { id: nextId(), originalPath: '~/Documents/informe_q3.docx', createdAt: new Date(Date.now() - 1000 * 60 * 20).toISOString(), sizeBytes: 40960, sha256: 'a1b2c3d4e5f6'.padEnd(64, '0') }
+  ]
+
+  const browserExtensionsMock: BrowserExtensionInfo[] = [
+    { browser: 'chrome', profile: 'Default', id: 'abcdefghijklmnop', name: 'Ad Blocker Pro', permissions: ['<all_urls>', 'webRequest', 'webRequestBlocking'], riskScore: 65, riskReasons: ['Solicita acceso a todas las paginas web que visitas', 'Puede interceptar o modificar trafico de red del navegador'] },
+    { browser: 'chrome', profile: 'Default', id: 'qrstuvwxyzabcdef', name: 'Password Manager', permissions: ['storage'], riskScore: 5, riskReasons: [] }
+  ]
+
+  const selfNetworkLog: SelfNetworkLogEntry[] = [
+    { id: nextId(), time: new Date(Date.now() - 1000 * 60 * 60).toISOString(), destination: 'github.com/D1se0/aegis-edr/releases', purpose: 'Comprobacion de actualizaciones' }
+  ]
+
+  function explainScoreMock(): ScoreExplanation {
+    const active = snapshot.alerts.filter((a) => !a.acknowledged)
+    const byGroup = new Map<string, { impact: number; count: number }>()
+    for (const a of active) {
+      const w = weightFor(a.severity)
+      if (w <= 0) continue
+      const key = `${a.category} · ${a.severity}`
+      const entry = byGroup.get(key) || { impact: 0, count: 0 }
+      entry.impact += w
+      entry.count += 1
+      byGroup.set(key, entry)
+    }
+    const factors = Array.from(byGroup.entries())
+      .map(([label, v]) => ({ label, impact: v.impact, count: v.count }))
+      .sort((a, b) => b.impact - a.impact)
+    return { score: snapshot.score, scoreLabel: snapshot.scoreLabel, factors }
+  }
 
   return {
     getSnapshot: async () => snapshot,
@@ -286,6 +355,113 @@ export function createMockApi(): AegisApi {
       alertListeners.add(cb)
       return () => alertListeners.delete(cb)
     },
-    onUpdateStatus: () => () => {}
+    onUpdateStatus: () => () => {},
+
+    // Asistente IA (mock: sin llamadas reales, sin tools, solo texto simulado)
+    aiGetSettings: async () => aiSettings,
+    aiSaveSettings: async (input) => {
+      aiSettings = { hasApiKey: !!input.apiKey || aiSettings.hasApiKey, keyStorageEncrypted: true, model: input.model, autonomousMode: input.autonomousMode }
+      return aiSettings
+    },
+    aiClearApiKey: async () => {
+      aiSettings = { ...aiSettings, hasApiKey: false, keyStorageEncrypted: false }
+      return aiSettings
+    },
+    aiSendMessage: async (text) => {
+      if (!aiSettings.hasApiKey) return { ok: false, error: 'No hay una clave de API de Claude configurada (modo demostracion fuera de Electron).' }
+      const userMsg: AiChatMessage = { id: nextId(), role: 'user', text, time: new Date().toISOString() }
+      aiHistory = [...aiHistory, userMsg]
+      const messageId = nextId()
+      const reply = `(Demo fuera de Electron, sin llamada real a la API) He recibido tu pregunta: "${text}". En la app de escritorio esto consultaria el estado real del equipo y podria proponer acciones.`
+      let sent = ''
+      await new Promise<void>((resolve) => {
+        let i = 0
+        const timer = setInterval(() => {
+          sent = reply.slice(0, i)
+          aiStreamListeners.forEach((cb) => cb({ messageId, textDelta: reply.slice(Math.max(0, i - 3), i), done: false }))
+          i += 3
+          if (i > reply.length) {
+            clearInterval(timer)
+            aiStreamListeners.forEach((cb) => cb({ messageId, textDelta: '', done: true }))
+            resolve()
+          }
+        }, 30)
+      })
+      aiHistory = [...aiHistory, { id: messageId, role: 'assistant', text: sent || reply, time: new Date().toISOString() }]
+      return { ok: true }
+    },
+    aiConfirmAction: async () => {},
+    aiClearConversation: async () => {
+      aiHistory = []
+    },
+    aiGetHistory: async () => aiHistory,
+    onAiStreamDelta: (cb) => {
+      aiStreamListeners.add(cb)
+      return () => aiStreamListeners.delete(cb)
+    },
+    onAiConfirmationRequest: (cb) => {
+      aiConfirmationListeners.add(cb)
+      return () => aiConfirmationListeners.delete(cb)
+    },
+
+    // Storyline / incidentes
+    listIncidents: async () => [],
+
+    // Score explicable
+    explainScore: async () => explainScoreMock(),
+
+    // Honeytokens
+    listHoneytokens: async () => honeytokens,
+
+    // Backups / rollback simplificado
+    listFileBackups: async () => fileBackups,
+    restoreFromBackup: async () => ok,
+
+    // Auditoria de extensiones de navegador
+    listBrowserExtensions: async () => browserExtensionsMock,
+    scanBrowserExtensions: async () => browserExtensionsMock,
+
+    // Modo incidente
+    triggerIncidentMode: async (reason) => {
+      pushAlert(makeAlert({ severity: 'critical', category: 'system', title: 'Modo Incidente activado (demo)', message: `Aislamiento y respuesta simulados: ${reason}`, autoBlocked: true }))
+      return { ok: true, bundlePath: 'demo://incident-bundle.zip' }
+    },
+
+    // Playbooks
+    listPlaybooks: async () => playbooks,
+    savePlaybook: async (rule) => {
+      if (rule.id) {
+        playbooks = playbooks.map((p) => (p.id === rule.id ? { ...p, ...rule } : p))
+        return playbooks.find((p) => p.id === rule.id)!
+      }
+      const created: PlaybookRule = { ...rule, id: nextId(), createdAt: new Date().toISOString(), timesTriggered: 0 }
+      playbooks = [created, ...playbooks]
+      return created
+    },
+    deletePlaybook: async (id) => {
+      playbooks = playbooks.filter((p) => p.id !== id)
+      return true
+    },
+
+    // Auto-vigilancia de red propia
+    listSelfNetworkLog: async () => selfNetworkLog,
+
+    // Config-as-code
+    exportConfig: async () => ({ version: 1, exportedAt: new Date().toISOString(), settings, playbooks }),
+    importConfig: async (raw) => {
+      try {
+        const parsed = JSON.parse(raw) as { settings?: AppSettings; playbooks?: PlaybookRule[] }
+        if (parsed.settings) settings = { ...settings, ...parsed.settings }
+        if (parsed.playbooks) playbooks = parsed.playbooks
+        emitSnapshot()
+        return ok
+      } catch (err) {
+        return { ok: false, error: `JSON invalido: ${String(err)}` }
+      }
+    },
+
+    // Insignia de score
+    getScoreBadgeSvg: async () =>
+      `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="20"><rect width="250" height="20" fill="#05070d"/><text x="10" y="14" fill="#fff" font-family="sans-serif" font-size="11">Protegido por Aegis EDR — ${snapshot.score}/100 · ${snapshot.scoreLabel}</text></svg>`
   }
 }

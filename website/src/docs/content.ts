@@ -508,7 +508,278 @@ export const DOCS: DocSection[] = [
       { type: 'h3', text: 'La seccion de Descargas de esta web muestra "Beta proxima"' },
       { type: 'p', text: 'Significa que el repositorio todavia no tiene ningun Release publico (o que la ultima release aun esta en borrador). En cuanto exista un Release publicado, esta seccion lo detecta automaticamente sin necesidad de tocar la web.' },
       { type: 'h3', text: 'Quiero vigilar otras carpetas ademas de Escritorio/Documentos/Descargas' },
-      { type: 'p', text: 'El campo watchPaths existe en el esquema de ajustes para personalizar las rutas vigiladas por el monitor de integridad de ficheros; en esta version no hay todavia un editor visual para esa lista en Ajustes (ver Known issues).' }
+      { type: 'p', text: 'El campo watchPaths existe en el esquema de ajustes para personalizar las rutas vigiladas por el monitor de integridad de ficheros; en esta version no hay todavia un editor visual para esa lista en Ajustes (ver Known issues).' },
+      { type: 'h3', text: 'Que datos ve la IA de la seccion Asistente IA' },
+      { type: 'p', text: 'Solo lo que tu preguntes: cuando envias un mensaje, el asistente puede consultar el estado real del equipo (procesos, conexiones, alertas, cuarentena, persistencia, ajustes) usando herramientas concretas, y esos datos viajan a la API de Anthropic junto con tu pregunta para poder responderte. Nunca ocurre en segundo plano ni sin que tu escribas algo. Ver la seccion Asistente IA para el detalle completo.' }
+    ]
+  },
+  {
+    slug: 'asistente-ia',
+    title: 'Asistente IA (Claude)',
+    group: 'Asistente IA',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Aegis EDR incluye un asistente conversacional basado en la API de Claude (Anthropic) que puede consultar el estado real de tu equipo y, si se lo permites, actuar sobre el: finalizar procesos, bloquear IPs, poner ficheros en cuarentena, aislar la red o activar/desactivar modulos de proteccion. Es "BYOK" (bring your own key): usa tu propia clave de API de Anthropic, nunca una clave compartida por Aegis EDR.'
+      },
+      {
+        type: 'callout',
+        tone: 'warning',
+        text: 'Esta es la unica funcion de Aegis EDR que envia datos fuera de tu equipo por diseño. Se activa exclusivamente cuando tu escribes una pregunta en la seccion Asistente IA — nunca en segundo plano, nunca de forma programada.'
+      },
+      { type: 'h3', text: 'Configuracion (BYOK)' },
+      {
+        type: 'list',
+        items: [
+          'Ve a la seccion "Asistente IA" y pega tu clave de la API de Anthropic (empieza por sk-ant-...). Puedes crear una en console.anthropic.com.',
+          'Elige el modelo: Claude Opus 5 (maxima calidad, recomendado para analisis complejos), Claude Sonnet 5 (equilibrado) o Claude Haiku 4.5 (el mas rapido y economico).',
+          'La clave se cifra con safeStorage de Electron, que usa el almacen de credenciales nativo del sistema operativo (Keychain en macOS, libsecret/keyring en Linux, DPAPI en Windows) antes de guardarse en disco.'
+        ]
+      },
+      {
+        type: 'callout',
+        tone: 'info',
+        text: 'Si tu sistema Linux no tiene un keyring compatible con libsecret instalado, safeStorage no puede cifrar y Aegis EDR te avisa explicitamente en la interfaz (badge de advertencia) en vez de fingir que la clave esta protegida.'
+      },
+      { type: 'h3', text: 'Que puede consultar (solo lectura, siempre automatico)' },
+      {
+        type: 'list',
+        items: [
+          'Panel general: puntuacion de seguridad, vitales del sistema, estado de proteccion.',
+          'Procesos en ejecucion con su puntuacion de riesgo.',
+          'Conexiones de red activas.',
+          'Historial de alertas.',
+          'Ficheros en cuarentena.',
+          'Puntos de persistencia detectados.',
+          'Ajustes actuales de la aplicacion.'
+        ]
+      },
+      { type: 'h3', text: 'Que puede hacer (acciones, con confirmacion por defecto)' },
+      {
+        type: 'list',
+        items: [
+          'Finalizar un proceso.',
+          'Bloquear o desbloquear una direccion IP.',
+          'Poner un fichero en cuarentena o restaurarlo.',
+          'Aislar la red del equipo por completo.',
+          'Activar o desactivar un modulo de proteccion concreto.'
+        ]
+      },
+      {
+        type: 'p',
+        text: 'Estas acciones son exactamente las mismas funciones internas, ya validadas, que usan los botones del resto de la interfaz (por ejemplo, bloquear una IP sigue pasando por la misma validacion de formato de firewall.ts). El asistente no tiene ningun atajo ni permiso especial que el resto de la app no tenga ya.'
+      },
+      { type: 'h3', text: 'Flujo de confirmacion humano-en-el-bucle' },
+      {
+        type: 'p',
+        text: 'Por defecto, cada vez que la IA quiere ejecutar una accion (no una consulta de solo lectura), Aegis EDR pausa el flujo y te muestra una tarjeta con: que accion quiere tomar, con que parametros exactos, y el razonamiento que dio el modelo antes de pedirla. Tu decides con un boton Aprobar o Denegar. Si denegas, la conversacion continua y el asistente respeta tu decision.'
+      },
+      { type: 'h3', text: 'Modo autonomo (opcional, desactivado por defecto)' },
+      {
+        type: 'callout',
+        tone: 'danger',
+        text: 'Si activas el "Modo autonomo" en la seccion Asistente IA, el asistente ejecutara las acciones que decida sin pedirte confirmacion previa. Cada accion autonoma queda registrada igualmente como una alerta explicita ("La IA ejecuto automaticamente: ... — motivo: ...") para que quede trazabilidad completa, pero no hay marcha atras antes de que ocurra. Actívalo solo si confias en el criterio del modelo para tu caso de uso.'
+      },
+      { type: 'h3', text: 'Limite de iteraciones' },
+      { type: 'p', text: 'El bucle de conversacion con herramientas tiene un limite de 12 iteraciones por mensaje para evitar bucles infinitos si el modelo encadenara llamadas a herramientas sin llegar a una respuesta final.' },
+      { type: 'h3', text: 'Errores comunes' },
+      {
+        type: 'table',
+        headers: ['Situacion', 'Que significa'],
+        rows: [
+          ['"La clave de API no es valida"', 'La clave introducida fue rechazada por la API de Anthropic (Anthropic.AuthenticationError).'],
+          ['"Limite de peticiones alcanzado"', 'Se ha superado el rate limit de tu cuenta de Anthropic; reintenta en unos segundos.'],
+          ['Aviso de clave sin cifrar', 'Tu sistema operativo no tiene disponible un almacen de credenciales compatible con safeStorage.']
+        ]
+      }
+    ]
+  },
+  {
+    slug: 'honeytokens',
+    title: 'Honeytokens (ficheros señuelo)',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Cuando estan activados en Ajustes, Aegis EDR siembra ficheros señuelo con nombres atractivos para un atacante o un ransomware (por ejemplo passwords.xlsx, aws_credentials.json) en carpetas habituales como Escritorio y Documentos, y los vigila con prioridad maxima.'
+      },
+      {
+        type: 'p',
+        text: 'Cualquier lectura, modificacion o cifrado de uno de estos ficheros dispara una alerta critica inmediata y pone en cuarentena automaticamente el proceso responsable — es uno de los tripwires mas eficaces contra ransomware y exfiltracion de datos, porque un fichero legitimo del usuario nunca deberia tocarlos.'
+      },
+      { type: 'h3', text: 'Donde verlos' },
+      { type: 'p', text: 'La seccion "Sistema de ficheros" tiene un panel Honeytokens que muestra cada señuelo y si ha sido activado ("¡Activado!") o sigue vigilando sin incidentes.' }
+    ]
+  },
+  {
+    slug: 'backups-rollback',
+    title: 'Copias de respaldo y rollback',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Con "Backup antes de cambios" activado en Ajustes, cada vez que el monitor de integridad de ficheros detecta un cambio en una ruta vigilada, Aegis EDR guarda antes una copia versionada del contenido en un directorio propio de la app (con su hash SHA-256).'
+      },
+      {
+        type: 'callout',
+        tone: 'info',
+        text: 'Esto NO es una integracion con snapshots nativos del sistema operativo (no usa VSS de Windows, snapshots de APFS en macOS ni btrfs/ZFS en Linux) — seria una integracion muy distinta por cada sistema operativo y de alto riesgo de romper algo fuera del control de la app. Es, deliberadamente, un historial de copias propio y simple: cada evento crea una entrada nueva sin sobreescribir las anteriores, asi que si un evento posterior resulta ser ransomware, las copias de eventos anteriores siguen disponibles.'
+      },
+      { type: 'h3', text: 'Restaurar' },
+      { type: 'p', text: 'Desde la pestaña "Backups" en Sistema de ficheros, cada copia tiene un boton Restaurar que la devuelve a su ruta original.' },
+      { type: 'p', text: 'El historial esta acotado (300 copias mas recientes, maximo 14 dias, y no se respaldan ficheros mayores de 25 MB) para no crecer sin limite en disco.' }
+    ]
+  },
+  {
+    slug: 'storyline-mitre',
+    title: 'Storyline de ataque y MITRE ATT&CK',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'En vez de una lista plana de alertas sueltas, Aegis EDR correlaciona automaticamente alertas relacionadas (mismo proceso, misma IP, o ventana temporal corta con relacion causal) en "incidentes": una cadena de eventos ordenada cronologicamente que cuenta la historia completa de un ataque en vez de fragmentos aislados.'
+      },
+      { type: 'h3', text: 'Donde verlo' },
+      { type: 'p', text: 'La seccion Alertas tiene una pestaña "Incidentes" con cada cadena agrupada y su linea de tiempo.' },
+      { type: 'h3', text: 'Tecnicas MITRE ATT&CK' },
+      { type: 'p', text: 'Cada alerta generada por una heuristica conocida incluye, cuando aplica, el identificador de la tecnica MITRE ATT&CK correspondiente (por ejemplo T1055), visible como una insignia en la propia alerta — util para correlacionar con otras herramientas o informes.' }
+    ]
+  },
+  {
+    slug: 'score-explicable',
+    title: 'Puntuacion explicable',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'La puntuacion de seguridad del Panel general nunca es una caja negra: al pulsar sobre el indicador circular se abre un desglose completo de que factores estan penalizando la puntuacion ahora mismo (categoria y severidad de las alertas activas, cuantos eventos hay en cada grupo, y cuanto resta cada uno al total).'
+      }
+    ]
+  },
+  {
+    slug: 'baseline-comportamiento',
+    title: 'Baseline de comportamiento',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Aegis EDR recuerda, por proceso, que destinos de red ha contactado historicamente. Cuando un proceso con un patron ya establecido (al menos 3 destinos distintos conocidos) contacta un destino completamente nuevo, esa conexion se marca con la insignia "Nueva" en la seccion Red y sube su puntuacion de riesgo — es una desviacion real del comportamiento habitual de ese proceso, no solo una regla estatica.'
+      },
+      {
+        type: 'callout',
+        tone: 'info',
+        text: 'Es una simplificacion deliberada: el historial es acumulativo (no una ventana temporal con caducidad automatica de entradas antiguas) y acotado a 200 destinos por proceso. No genera alertas de "primera conexion" nada mas instalar la app, precisamente porque exige un baseline minimo ya establecido.'
+      }
+    ]
+  },
+  {
+    slug: 'lolbins',
+    title: 'Deteccion de LOLBins y fileless',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Ademas de las heuristicas generales de procesos, Aegis EDR reconoce binarios legitimos del sistema operativo frecuentemente abusados para ejecucion, descarga o evasion sin dejar caer malware nuevo en disco ("living-off-the-land binaries" o LOLBins): powershell, mshta, rundll32, certutil, regsvr32, wscript, cscript, bitsadmin y otros.'
+      },
+      {
+        type: 'p',
+        text: 'Cuando uno de estos binarios aparece junto a parametros tipicos de descarga o ejecucion ofuscada (-enc, downloadstring, invoke-expression, -windowstyle hidden...), el proceso se marca con la insignia "LOLBin" en la seccion Procesos.'
+      },
+      {
+        type: 'callout',
+        tone: 'info',
+        text: 'Es un best-effort documentado: no siempre se dispone de la linea de comandos completa del proceso via la libreria systeminformation en todos los sistemas operativos, asi que esta deteccion puede no capturar todos los casos.'
+      }
+    ]
+  },
+  {
+    slug: 'extensiones-navegador',
+    title: 'Auditoria de extensiones de navegador',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Desde la pestaña "Extensiones" en Sistema de ficheros, Aegis EDR enumera las extensiones instaladas en los navegadores conocidos (Chrome, Chromium, Edge, Firefox) leyendo sus carpetas de perfil, y marca combinaciones de permisos de alto riesgo (por ejemplo acceso a todas las paginas web combinado con interceptar/modificar trafico de red) — un vector de infeccion habitual que la mayoria de EDR de escritorio no cubre.'
+      }
+    ]
+  },
+  {
+    slug: 'modo-incidente',
+    title: 'Modo Incidente',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Boton de un clic en el Panel general para una respuesta de contencion completa: aisla la red del equipo, finaliza los procesos actualmente marcados como criticos, y genera un paquete de evidencia (snapshot completo, alertas, hashes relevantes y linea de tiempo) listo para adjuntar a un informe o entregar a un equipo de respuesta a incidentes.'
+      },
+      {
+        type: 'callout',
+        tone: 'danger',
+        text: 'Es una accion drastica y pide confirmacion antes de ejecutarse: aislara tambien tu propia conectividad (salvo loopback). Usalo solo ante una amenaza activa confirmada.'
+      }
+    ]
+  },
+  {
+    slug: 'playbooks',
+    title: 'Playbooks (automatizacion si-esto-entonces-aquello)',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'En Ajustes > Playbooks puedes definir reglas propias: "si ocurre una alerta de esta categoria con al menos esta severidad, entonces ejecuta esta accion" (finalizar proceso, bloquear IP, poner en cuarentena, o solo notificar). Cada regla se puede activar/desactivar individualmente y muestra cuantas veces se ha disparado.'
+      },
+      {
+        type: 'p',
+        text: 'Es una automatizacion ligera tipo SOAR pensada para casos concretos que quieras resolver siempre de la misma forma, sin depender solo del Bloqueo automatico global.'
+      }
+    ]
+  },
+  {
+    slug: 'webhooks',
+    title: 'Webhooks de alertas criticas',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'En Ajustes puedes configurar una URL de webhook (compatible con el formato de Slack, Discord, o un formato generico) para recibir una notificacion externa cada vez que se genere una alerta de severidad critica. Un fallo al enviar el webhook nunca bloquea ni interrumpe el resto de la deteccion.'
+      }
+    ]
+  },
+  {
+    slug: 'transparencia-red',
+    title: 'Transparencia de red propia',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Aegis EDR se vigila a si mismo: el panel "Transparencia" en Ajustes lista, con destino y proposito, cada llamada de red saliente que hace la propia aplicacion — la comprobacion de actualizaciones contra GitHub, y si usas el Asistente IA, cada consulta a la API de Anthropic. Ningun EDR corporativo suele ofrecer este nivel de auditoria sobre su propia telemetria; aqui es una funcion de primera clase, coherente con el compromiso de cero telemetria oculta del proyecto.'
+      }
+    ]
+  },
+  {
+    slug: 'config-como-codigo',
+    title: 'Configuracion como codigo',
+    group: 'Funciones',
+    blocks: [
+      {
+        type: 'p',
+        text: 'Desde Ajustes puedes exportar toda tu configuracion (ajustes y playbooks) a un unico fichero JSON descargable, e importarlo de vuelta en otro equipo o tras una reinstalacion — util para replicar tu configuracion entre maquinas o versionarla junto a tus propios dotfiles.'
+      }
+    ]
+  },
+  {
+    slug: 'interfaz-avanzada',
+    title: 'Interfaz avanzada',
+    group: 'Funciones',
+    blocks: [
+      { type: 'h3', text: 'Radar de amenazas y glow ambiental' },
+      { type: 'p', text: 'El Panel general incluye un radar animado con un blip por cada alerta activa (coloreado segun severidad), y un resplandor ambiental de fondo que cambia de cian tranquilo a ambar o rojo segun tu puntuacion de seguridad global — el estado de tu equipo se percibe de un vistazo, incluso sin leer numeros.' },
+      { type: 'h3', text: 'Paleta de comandos' },
+      { type: 'p', text: 'Pulsa Ctrl+K (o Cmd+K en macOS) en cualquier momento para abrir una paleta de comandos con busqueda difusa y saltar directamente a cualquier seccion de la aplicacion.' },
+      { type: 'h3', text: 'Modo presentacion' },
+      { type: 'p', text: 'En Ajustes > Privacidad visual puedes activar el Modo presentacion, que difumina datos sensibles en pantalla (IPs, rutas de fichero, hostname) para hacer capturas o compartir pantalla sin exponerlos; pasar el raton por encima de un dato difuminado lo revela temporalmente.' },
+      { type: 'h3', text: 'Insignia de puntuacion' },
+      { type: 'p', text: 'El boton "Copiar insignia SVG" del Panel general genera una pequeña insignia estilo shields.io con tu puntuacion actual, lista para pegar donde quieras.' }
     ]
   }
 ]

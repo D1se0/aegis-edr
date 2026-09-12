@@ -9,6 +9,7 @@ import {
   ShieldAlert,
   Settings,
   ShieldHalf,
+  Bot,
   type LucideIcon
 } from 'lucide-react'
 import { useAppStore, type Section } from '@/store/useAppStore'
@@ -21,6 +22,7 @@ const NAV: Array<{ id: Section; label: string; icon: LucideIcon }> = [
   { id: 'persistence', label: 'Autoarranque', icon: ListTree },
   { id: 'alerts', label: 'Alertas', icon: BellRing },
   { id: 'quarantine', label: 'Cuarentena', icon: ShieldAlert },
+  { id: 'ai', label: 'Asistente IA', icon: Bot },
   { id: 'settings', label: 'Ajustes', icon: Settings }
 ]
 
@@ -57,7 +59,7 @@ export function Sidebar() {
       <div className="glass-panel mt-2 flex items-center gap-2 p-3">
         <span className={clsx('h-2 w-2 rounded-full', snapshot?.protection.realtimeMonitoring ? 'bg-aegis-green animate-pulse' : 'bg-slate-500')} />
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-slate-300">{snapshot?.vitals.hostname || 'equipo-local'}</p>
+          <p data-sensitive="true" className="truncate text-xs font-medium text-slate-300">{snapshot?.vitals.hostname || 'equipo-local'}</p>
           <p className="truncate text-[11px] text-slate-500">{snapshot?.vitals.distro || 'Detectando SO...'}</p>
         </div>
       </div>

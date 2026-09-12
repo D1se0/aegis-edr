@@ -6,11 +6,14 @@ import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { FileEvent, HostsFileStatus } from '../../shared/types'
-import { scoreFileEvent, severityFromScore, severityMeetsThreshold } from './threatEngine'
+import { scoreFileEvent, severityFromScore, severityMeetsThreshold, mapReasonsToMitre } from './threatEngine'
 import { raiseAlert } from './alerts'
 import { quarantineFile } from './quarantine'
 import { getSettings } from './store'
 import { logger } from './logger'
+import { seedHoneytokens, isHoneytokenPath, markHoneytokenTriggered } from './honeytokens'
+import { backupFileVersion } from './fileBackup'
+import { isolateHost } from './firewall'
 
 const MAX_EVENTS = 200
 let recentEvents: FileEvent[] = []
@@ -91,6 +94,8 @@ export function startFileIntegrityMonitor() {
   const settings = getSettings()
   if (!settings.protection.fileGuard) return
 
+  seedHoneytokens()
+
   const watchPaths = settings.watchPaths.length ? settings.watchPaths : getDefaultUserDataPaths()
   if (watchPaths.length && !watcher) {
     watcher = chokidar.watch(watchPaths, {
@@ -100,6 +105,32 @@ export function startFileIntegrityMonitor() {
     })
 
     const handle = (type: FileEvent['type']) => (path: string) => {
+      // Honeytoken: ningun uso legitimo deberia tocar nunca este fichero senuelo.
+      if (isHoneytokenPath(path)) {
+        markHoneytokenTriggered(path)
+        pushEvent({ id: randomUUID(), path, type, time: new Date().toISOString(), zone: 'user-data', riskScore: 100, riskReasons: ['Honeytoken disparado'] })
+        raiseAlert({
+          severity: 'critical',
+          category: 'filesystem',
+          title: 'Honeytoken disparado: posible amenaza activa',
+          message: `Se ha accedido/modificado el fichero senuelo ${path}. Ningun proceso legitimo deberia tocarlo — es un fuerte indicador de ransomware, exfiltracion o movimiento lateral en curso.`,
+          sourceId: path,
+          mitreTechniques: mapReasonsToMitre(['honeytoken'])
+        })
+        // No hay atribucion de proceso disponible via file-watcher (requeriria auditoria a nivel de SO),
+        // asi que la respuesta automatica actua al nivel de host, no de proceso individual.
+        if (settings.protection.autoBlock && severityMeetsThreshold('critical', settings.autoBlockSeverity)) {
+          isolateHost('Honeytoken disparado: aislamiento preventivo del equipo').catch((err) =>
+            logger.error('fileIntegrity', 'Fallo al aislar el equipo tras honeytoken', String(err))
+          )
+        }
+        return
+      }
+
+      if (settings.backupBeforeChange && (type === 'add' || type === 'change')) {
+        backupFileVersion(path)
+      }
+
       const isBurst = registerUserDataChange()
       const { riskScore, riskReasons } = scoreFileEvent('user-data', path, isBurst)
       const ev: FileEvent = {
@@ -118,8 +149,9 @@ export function startFileIntegrityMonitor() {
           severity: 'critical',
           category: 'ransomware',
           title: 'Posible actividad de ransomware detectada',
-          message: `Se han modificado ${BURST_THRESHOLD}+ ficheros en ${watchPaths.join(', ')} en menos de ${BURST_WINDOW_MS / 1000}s. Se recomienda aislar el equipo de la red inmediatamente.`,
-          sourceId: path
+          message: `Se han modificado ${BURST_THRESHOLD}+ ficheros en ${watchPaths.join(', ')} en menos de ${BURST_WINDOW_MS / 1000}s. Se recomienda aislar el equipo de la red inmediatamente. Si tienes copias de seguridad activadas, revisa el historial de versiones para restaurar el ultimo estado bueno conocido.`,
+          sourceId: path,
+          mitreTechniques: mapReasonsToMitre(['ransomware'])
         })
         if (settings.protection.autoBlock && severityMeetsThreshold('critical', settings.autoBlockSeverity) && (type === 'add' || type === 'change')) {
           const result = quarantineFile(path, `Bloqueo automatico: posible rafaga de ransomware en ${watchPaths.join(', ')}.`)
@@ -132,7 +164,8 @@ export function startFileIntegrityMonitor() {
           category: 'filesystem',
           title: 'Fichero sospechoso detectado',
           message: `${riskReasons.join('. ')}: ${path}`,
-          sourceId: path
+          sourceId: path,
+          mitreTechniques: mapReasonsToMitre(riskReasons)
         })
         if (settings.protection.autoBlock && severityMeetsThreshold(severity, settings.autoBlockSeverity) && (type === 'add' || type === 'change')) {
           const result = quarantineFile(path, `Bloqueo automatico: fichero de severidad ${severity} (${riskReasons.join('. ')}).`)
@@ -169,7 +202,8 @@ function checkCriticalFiles() {
         category: file === getHostsPath() ? 'hosts' : 'filesystem',
         title: `Fichero critico modificado: ${file}`,
         message: 'Se ha detectado un cambio no verificado en un fichero critico del sistema. Revisa el contenido cuanto antes.',
-        sourceId: file
+        sourceId: file,
+        mitreTechniques: mapReasonsToMitre(['fichero critico del sistema'])
       })
     }
     criticalHashes.set(file, hash)
@@ -190,7 +224,8 @@ function checkCriticalFiles() {
           category: 'hosts',
           title: 'Entradas sospechosas en el fichero hosts',
           message: `Se han detectado redirecciones potencialmente maliciosas: ${suspicious.join(', ')}`,
-          sourceId: file
+          sourceId: file,
+          mitreTechniques: mapReasonsToMitre(['fichero critico del sistema hosts'])
         })
       }
     }

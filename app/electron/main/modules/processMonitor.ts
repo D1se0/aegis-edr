@@ -1,6 +1,7 @@
 import si from 'systeminformation'
 import type { ProcessInfo } from '../../shared/types'
-import { scoreProcess, severityFromScore } from './threatEngine'
+import { scoreProcess, severityFromScore, mapReasonsToMitre } from './threatEngine'
+import { checkLolbin } from './lolbins'
 import { raiseAlert } from './alerts'
 import { getSettings } from './store'
 import { logger } from './logger'
@@ -20,19 +21,30 @@ export async function pollProcesses(): Promise<ProcessInfo[]> {
     const data = await si.processes()
     const list: ProcessInfo[] = data.list.map((p) => {
       const memMb = (p.memRss || 0) / 1024
-      const { riskScore, riskReasons } = scoreProcess({
-        name: p.name || 'desconocido',
-        path: (p as unknown as { path?: string }).path || p.command || '',
+      const name = p.name || 'desconocido'
+      const path = (p as unknown as { path?: string }).path || p.command || ''
+      const scored = scoreProcess({
+        name,
+        path,
         user: p.user || '',
         cpu: p.cpu || 0,
         memMb,
         cpuAlertThreshold: settings.cpuAlertThreshold
       })
+      let riskScore = scored.riskScore
+      const riskReasons = [...scored.riskReasons]
+
+      const lolbin = checkLolbin(name, path)
+      if (lolbin.flagged && lolbin.reason) {
+        riskScore = Math.min(100, riskScore + 35)
+        riskReasons.push(lolbin.reason)
+      }
+
       return {
         pid: p.pid,
         ppid: p.parentPid,
-        name: p.name || 'desconocido',
-        path: (p as unknown as { path?: string }).path || p.command || '',
+        name,
+        path,
         user: p.user || 'n/d',
         cpu: p.cpu || 0,
         memMb,
@@ -58,7 +70,8 @@ export async function pollProcesses(): Promise<ProcessInfo[]> {
           category: 'process',
           title: `Proceso sospechoso detectado: ${proc.name}`,
           message: `${proc.riskReasons.join('. ')}. PID ${proc.pid}, ruta: ${proc.path || 'desconocida'}.`,
-          sourceId: String(proc.pid)
+          sourceId: String(proc.pid),
+          mitreTechniques: mapReasonsToMitre(proc.riskReasons)
         })
       }
     }

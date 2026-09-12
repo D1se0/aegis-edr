@@ -1,7 +1,7 @@
 {
   "name": "aegis-edr-website",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sitio oficial de Aegis EDR: presentacion, funciones y descargas.",
   "type": "module",
   "scripts": {

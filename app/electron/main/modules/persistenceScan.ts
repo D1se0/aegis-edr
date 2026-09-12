@@ -4,7 +4,7 @@ import { readdirSync, readFileSync, existsSync } from 'node:fs'
 import { homedir, platform } from 'node:os'
 import { join } from 'node:path'
 import type { PersistenceItem } from '../../shared/types'
-import { scorePersistence, severityFromScore } from './threatEngine'
+import { scorePersistence, severityFromScore, mapReasonsToMitre } from './threatEngine'
 import { raiseAlert } from './alerts'
 import { getSettings } from './store'
 import { logger } from './logger'
@@ -152,7 +152,8 @@ export async function scanPersistence(): Promise<PersistenceItem[]> {
           category: 'persistence',
           title: `Nueva entrada de autoarranque: ${item.name}`,
           message: `Se ha registrado un nuevo punto de persistencia (${item.source}). Comando: ${item.command || 'n/d'}`,
-          sourceId: item.id
+          sourceId: item.id,
+          mitreTechniques: mapReasonsToMitre(['autoarranque', ...item.riskReasons])
         })
       }
     }

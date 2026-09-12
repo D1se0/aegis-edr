@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { Alert, AppSettings, SecuritySnapshot } from '@shared/types'
 import { getAegisApi, isElectron } from '@/lib/ipcClient'
 
-export type Section = 'dashboard' | 'processes' | 'network' | 'filesystem' | 'persistence' | 'alerts' | 'quarantine' | 'settings'
+export type Section = 'dashboard' | 'processes' | 'network' | 'filesystem' | 'persistence' | 'alerts' | 'quarantine' | 'ai' | 'settings'
 
 interface ToastItem extends Alert {
   toastId: string
@@ -15,6 +15,10 @@ interface AppState {
   settings: AppSettings | null
   toasts: ToastItem[]
   isElectron: boolean
+  presentationMode: boolean
+  togglePresentationMode: () => void
+  commandPaletteOpen: boolean
+  setCommandPaletteOpen: (open: boolean) => void
   setSection: (s: Section) => void
   dismissToast: (toastId: string) => void
   init: () => void
@@ -26,6 +30,7 @@ interface AppState {
   acknowledgeAlert: (id: string) => Promise<void>
   clearAlerts: () => Promise<void>
   toggleProtection: (key: keyof AppSettings['protection'], value: boolean) => Promise<void>
+  updateAppSettings: (patch: Partial<AppSettings>) => Promise<void>
   runFullScan: () => Promise<void>
   isolateHost: (reason: string) => Promise<void>
   restoreNetwork: () => Promise<void>
@@ -40,6 +45,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   settings: null,
   toasts: [],
   isElectron,
+  presentationMode: false,
+  togglePresentationMode: () => set((s) => ({ presentationMode: !s.presentationMode })),
+  commandPaletteOpen: false,
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   setSection: (section) => set({ section }),
   dismissToast: (toastId) => set((s) => ({ toasts: s.toasts.filter((t) => t.toastId !== toastId) })),
   init: () => {
@@ -84,6 +93,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const settings = get().settings
     if (!settings) return
     const updated = { ...settings, protection: { ...settings.protection, [key]: value } }
+    set({ settings: updated })
+    await getAegisApi().updateSettings(updated)
+  },
+  updateAppSettings: async (patch) => {
+    const settings = get().settings
+    if (!settings) return
+    const updated = { ...settings, ...patch }
     set({ settings: updated })
     await getAegisApi().updateSettings(updated)
   },

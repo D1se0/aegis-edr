@@ -68,3 +68,13 @@ body {
     @apply text-slate-50 bg-white/[0.08] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)];
   }
 }
+
+/* Modo presentacion: difumina datos sensibles (IPs, rutas, usuarios, hostname)
+   para hacer capturas o compartir pantalla sin exponerlos. */
+.presentation-mode [data-sensitive='true'] {
+  filter: blur(6px);
+  transition: filter 0.2s ease;
+}
+.presentation-mode [data-sensitive='true']:hover {
+  filter: blur(0);
+}

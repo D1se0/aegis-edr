@@ -1,10 +1,11 @@
 import si from 'systeminformation'
 import type { NetworkConnection } from '../../shared/types'
-import { scoreConnection, severityFromScore, severityMeetsThreshold } from './threatEngine'
+import { scoreConnection, severityFromScore, severityMeetsThreshold, mapReasonsToMitre } from './threatEngine'
 import { raiseAlert } from './alerts'
 import { isIpBlocked, blockIp } from './firewall'
 import { getSettings } from './store'
 import { logger } from './logger'
+import { isNovelTarget } from './behaviorBaseline'
 
 let latest: NetworkConnection[] = []
 let timer: NodeJS.Timeout | null = null
@@ -30,12 +31,20 @@ export async function pollConnections(): Promise<NetworkConnection[]> {
       const remoteAddress = c.peerAddress || ''
       const remotePort = c.peerPort ? Number(c.peerPort) : 0
       const processName = c.process || 'desconocido'
-      const { riskScore, riskReasons } = scoreConnection({
+      const base = scoreConnection({
         remoteAddress,
         remotePort,
         state: c.state || '',
         processName
       })
+      let riskScore = base.riskScore
+      const riskReasons = [...base.riskReasons]
+
+      if (remoteAddress && !isPrivateOrLoopbackAddr(remoteAddress) && isNovelTarget(processName, `${remoteAddress}:${remotePort}`)) {
+        riskScore = Math.min(100, riskScore + 20)
+        riskReasons.push('Primera conexion detectada hacia este destino: se desvia del patron habitual de este proceso')
+      }
+
       return {
         id: `${c.protocol}:${c.localAddress}:${c.localPort}-${remoteAddress}:${remotePort}:${c.pid}`,
         protocol: c.protocol || 'tcp',
@@ -69,7 +78,8 @@ export async function pollConnections(): Promise<NetworkConnection[]> {
           category: 'network',
           title: `Conexion sospechosa hacia ${conn.remoteAddress}:${conn.remotePort}`,
           message: `${conn.riskReasons.join('. ')}. Proceso: ${conn.processName} (PID ${conn.pid}).`,
-          sourceId: conn.id
+          sourceId: conn.id,
+          mitreTechniques: mapReasonsToMitre(conn.riskReasons)
         })
 
         if (settings.protection.autoBlock && severityMeetsThreshold(severity, settings.autoBlockSeverity) && !isIpBlocked(conn.remoteAddress)) {
@@ -116,13 +126,25 @@ function detectPortScanning(list: NetworkConnection[], threshold: number) {
           category: 'network',
           title: 'Posible escaneo de puertos detectado',
           message: `El proceso ${proc?.processName || 'desconocido'} (PID ${pid}) ha contactado con ${entry.targets.size} combinaciones IP:puerto distintas en menos de un minuto.`,
-          sourceId: String(pid)
+          sourceId: String(pid),
+          mitreTechniques: mapReasonsToMitre(['escaneo de puertos'])
         })
       }
       entry.targets.clear()
       entry.windowStart = now
     }
   }
+}
+
+function isPrivateOrLoopbackAddr(ip: string): boolean {
+  return (
+    ip === '' ||
+    ip === '::1' ||
+    ip.startsWith('127.') ||
+    ip.startsWith('10.') ||
+    ip.startsWith('192.168.') ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(ip)
+  )
 }
 
 export function startNetworkMonitor(intervalMs = 4000) {

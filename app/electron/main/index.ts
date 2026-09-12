@@ -13,8 +13,27 @@ import { startSystemInfoMonitor, getVitals, getUsbEvents } from './modules/syste
 import { blockIp, unblockIp, isolateHost, restoreNetwork } from './modules/firewall'
 import { quarantineFile, restoreFromQuarantine, listQuarantine } from './modules/quarantine'
 import { onAlert, getAlerts, acknowledgeAlert, clearAlerts, raiseAlert } from './modules/alerts'
-import { computeSecurityScore } from './modules/threatEngine'
+import { computeSecurityScore, explainScore } from './modules/threatEngine'
 import { initUpdater, checkForUpdates } from './modules/updater'
+import { initStorylineEngine, listIncidents } from './modules/storylineEngine'
+import { evaluatePlaybooks, listPlaybooks, savePlaybook, deletePlaybook } from './modules/playbooks'
+import { listHoneytokens } from './modules/honeytokens'
+import { listFileBackups, restoreFromBackup } from './modules/fileBackup'
+import { scanBrowserExtensions, listBrowserExtensions } from './modules/browserExtensions'
+import { triggerIncidentMode } from './modules/incidentMode'
+import { listSelfNetworkLog } from './modules/selfTelemetry'
+import { exportConfig, importConfig } from './modules/store'
+import { buildScoreBadgeSvg } from './modules/scoreBadge'
+import {
+  getAiSettings,
+  saveAiSettings,
+  clearAiApiKey,
+  sendAiMessage,
+  confirmAiAction,
+  clearAiConversation,
+  getAiHistory
+} from './modules/aiAssistant'
+import type { AiSettingsInput } from '../shared/types'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = join(__dirname, '..', '..')
@@ -39,7 +58,8 @@ function buildSnapshot(): SecuritySnapshot {
     hosts: getHostsStatus(),
     usbEvents: getUsbEvents(),
     protection: settings.protection,
-    lastScan: new Date().toISOString()
+    lastScan: new Date().toISOString(),
+    incidents: listIncidents()
   }
 }
 
@@ -132,6 +152,59 @@ function registerIpc() {
     if (action === 'close') mainWindow.close()
   })
   ipcMain.handle(IPC.openExternal, (_e, url: string) => shell.openExternal(url))
+
+  // Asistente IA
+  ipcMain.handle(IPC.aiGetSettings, () => getAiSettings())
+  ipcMain.handle(IPC.aiSaveSettings, (_e, input: AiSettingsInput) => saveAiSettings(input))
+  ipcMain.handle(IPC.aiClearApiKey, () => clearAiApiKey())
+  ipcMain.handle(IPC.aiSendMessage, (_e, text: string) => {
+    if (!mainWindow) return { ok: false, error: 'Ventana no disponible.' }
+    return sendAiMessage(mainWindow, text)
+  })
+  ipcMain.handle(IPC.aiConfirmAction, (_e, requestId: string, approved: boolean) => confirmAiAction(requestId, approved))
+  ipcMain.handle(IPC.aiClearConversation, () => clearAiConversation())
+  ipcMain.handle(IPC.aiGetHistory, () => getAiHistory())
+
+  // Storyline / incidentes
+  ipcMain.handle(IPC.listIncidents, () => listIncidents())
+
+  // Score explicable
+  ipcMain.handle(IPC.explainScore, () => explainScore(getAlerts()))
+
+  // Honeytokens
+  ipcMain.handle(IPC.listHoneytokens, () => listHoneytokens())
+
+  // Backups / rollback simplificado
+  ipcMain.handle(IPC.listFileBackups, () => listFileBackups())
+  ipcMain.handle(IPC.restoreFromBackup, (_e, id: string) => restoreFromBackup(id))
+
+  // Auditoria de extensiones de navegador
+  ipcMain.handle(IPC.listBrowserExtensions, () => listBrowserExtensions())
+  ipcMain.handle(IPC.scanBrowserExtensions, () => scanBrowserExtensions())
+
+  // Modo incidente
+  ipcMain.handle(IPC.triggerIncidentMode, (_e, reason: string) => triggerIncidentMode(reason))
+
+  // Playbooks
+  ipcMain.handle(IPC.listPlaybooks, () => listPlaybooks())
+  ipcMain.handle(IPC.savePlaybook, (_e, rule: Parameters<typeof savePlaybook>[0]) => savePlaybook(rule))
+  ipcMain.handle(IPC.deletePlaybook, (_e, id: string) => {
+    deletePlaybook(id)
+    return true
+  })
+
+  // Auto-vigilancia de red propia
+  ipcMain.handle(IPC.listSelfNetworkLog, () => listSelfNetworkLog())
+
+  // Config-as-code
+  ipcMain.handle(IPC.exportConfig, () => exportConfig())
+  ipcMain.handle(IPC.importConfig, (_e, raw: string) => importConfig(raw))
+
+  // Insignia de score
+  ipcMain.handle(IPC.getScoreBadgeSvg, () => {
+    const { score, label } = computeSecurityScore(getAlerts())
+    return buildScoreBadgeSvg(score, label)
+  })
 }
 
 app.whenReady().then(() => {
@@ -145,6 +218,8 @@ app.whenReady().then(() => {
   startFileIntegrityMonitor()
   startPersistenceScan()
   startSystemInfoMonitor()
+  initStorylineEngine()
+  scanBrowserExtensions()
 
   onAlert((alert) => {
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -153,6 +228,7 @@ app.whenReady().then(() => {
     if (['critical', 'high'].includes(alert.severity) && Notification.isSupported()) {
       new Notification({ title: `Aegis EDR · ${alert.title}`, body: alert.message }).show()
     }
+    evaluatePlaybooks(alert).catch((err) => logger.error('main', 'Fallo evaluando playbooks', String(err)))
   })
 
   setInterval(broadcastSnapshot, 3000)

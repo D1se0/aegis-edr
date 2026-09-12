@@ -87,6 +87,7 @@ export interface Alert {
   sourceId?: string
   acknowledged: boolean
   autoBlocked: boolean
+  mitreTechniques?: string[]
 }
 
 export interface SystemVitals {
@@ -115,6 +116,7 @@ export interface SecuritySnapshot {
   usbEvents: UsbDevice[]
   protection: ProtectionState
   lastScan: string
+  incidents: Incident[]
 }
 
 export interface ProtectionState {
@@ -134,6 +136,182 @@ export interface AppSettings {
   autoBlockSeverity: Severity | 'off'
   updateChannel: 'stable' | 'beta'
   telemetryOptIn: boolean
+  honeytokensEnabled: boolean
+  backupBeforeChange: boolean
+  webhookUrl: string | null
+  webhookFormat: 'slack' | 'discord' | 'generic'
+}
+
+// ---------------------------------------------------------------------------
+// Asistente IA (Claude)
+// ---------------------------------------------------------------------------
+
+export type AiModel = 'claude-opus-5' | 'claude-sonnet-5' | 'claude-haiku-4-5'
+
+export interface AiSettings {
+  hasApiKey: boolean
+  keyStorageEncrypted: boolean
+  model: AiModel
+  autonomousMode: boolean
+}
+
+export interface AiSettingsInput {
+  apiKey?: string
+  model: AiModel
+  autonomousMode: boolean
+}
+
+export interface AiChatMessage {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  time: string
+  toolCalls?: Array<{ name: string; input: Record<string, unknown> }>
+}
+
+export interface AiConfirmationRequest {
+  requestId: string
+  toolName: string
+  toolLabel: string
+  input: Record<string, unknown>
+  reasoning: string
+  createdAt: string
+}
+
+export interface AiStreamDelta {
+  messageId: string
+  textDelta: string
+  done: boolean
+}
+
+export interface AiSendResult {
+  ok: boolean
+  error?: string
+}
+
+// ---------------------------------------------------------------------------
+// Storyline / correlacion de incidentes
+// ---------------------------------------------------------------------------
+
+export interface IncidentEvent {
+  alertId: string
+  time: string
+  category: AlertCategory
+  summary: string
+}
+
+export interface Incident {
+  id: string
+  title: string
+  severity: Severity
+  startedAt: string
+  updatedAt: string
+  events: IncidentEvent[]
+  processKey?: string
+  ip?: string
+}
+
+// ---------------------------------------------------------------------------
+// Score explicable
+// ---------------------------------------------------------------------------
+
+export interface ScoreFactor {
+  label: string
+  impact: number
+  count: number
+}
+
+export interface ScoreExplanation {
+  score: number
+  scoreLabel: SecuritySnapshot['scoreLabel']
+  factors: ScoreFactor[]
+}
+
+// ---------------------------------------------------------------------------
+// Playbooks (reglas si-esto-entonces-aquello)
+// ---------------------------------------------------------------------------
+
+export type PlaybookActionType = 'kill_process' | 'block_ip' | 'quarantine_file' | 'notify'
+
+export interface PlaybookCondition {
+  category?: AlertCategory
+  minSeverity: Severity
+  matchText?: string
+}
+
+export interface PlaybookRule {
+  id: string
+  name: string
+  enabled: boolean
+  condition: PlaybookCondition
+  action: PlaybookActionType
+  createdAt: string
+  timesTriggered: number
+}
+
+// ---------------------------------------------------------------------------
+// Honeytokens
+// ---------------------------------------------------------------------------
+
+export interface HoneytokenFile {
+  path: string
+  createdAt: string
+  triggered: boolean
+  triggeredAt?: string
+}
+
+// ---------------------------------------------------------------------------
+// Backups locales (rollback simplificado, no es snapshot nativo del SO)
+// ---------------------------------------------------------------------------
+
+export interface FileBackupEntry {
+  id: string
+  originalPath: string
+  createdAt: string
+  sizeBytes: number
+  sha256: string
+}
+
+// ---------------------------------------------------------------------------
+// Auditoria de extensiones de navegador
+// ---------------------------------------------------------------------------
+
+export interface BrowserExtensionInfo {
+  browser: 'chrome' | 'chromium' | 'edge' | 'firefox'
+  profile: string
+  id: string
+  name: string
+  permissions: string[]
+  riskScore: number
+  riskReasons: string[]
+}
+
+// ---------------------------------------------------------------------------
+// Auto-vigilancia de red (transparencia de la propia app)
+// ---------------------------------------------------------------------------
+
+export interface SelfNetworkLogEntry {
+  id: string
+  time: string
+  destination: string
+  purpose: string
+}
+
+// ---------------------------------------------------------------------------
+// Modo incidente
+// ---------------------------------------------------------------------------
+
+export interface IncidentModeResult {
+  ok: boolean
+  bundlePath?: string
+  error?: string
+}
+
+export interface ConfigBundle {
+  version: 1
+  exportedAt: string
+  settings: AppSettings
+  playbooks: PlaybookRule[]
 }
 
 export const IPC = {
@@ -158,7 +336,54 @@ export const IPC = {
   openExternal: 'aegis:open-external',
   onSnapshotUpdate: 'aegis:on-snapshot-update',
   onAlert: 'aegis:on-alert',
-  onUpdateStatus: 'aegis:on-update-status'
+  onUpdateStatus: 'aegis:on-update-status',
+
+  // Asistente IA
+  aiGetSettings: 'aegis:ai-get-settings',
+  aiSaveSettings: 'aegis:ai-save-settings',
+  aiClearApiKey: 'aegis:ai-clear-api-key',
+  aiSendMessage: 'aegis:ai-send-message',
+  aiConfirmAction: 'aegis:ai-confirm-action',
+  aiClearConversation: 'aegis:ai-clear-conversation',
+  aiGetHistory: 'aegis:ai-get-history',
+  onAiStreamDelta: 'aegis:on-ai-stream-delta',
+  onAiConfirmationRequest: 'aegis:on-ai-confirmation-request',
+  onAiMessage: 'aegis:on-ai-message',
+
+  // Storyline / incidentes
+  listIncidents: 'aegis:list-incidents',
+
+  // Score explicable
+  explainScore: 'aegis:explain-score',
+
+  // Honeytokens
+  listHoneytokens: 'aegis:list-honeytokens',
+
+  // Backups / rollback simplificado
+  listFileBackups: 'aegis:list-file-backups',
+  restoreFromBackup: 'aegis:restore-from-backup',
+
+  // Auditoria de extensiones de navegador
+  listBrowserExtensions: 'aegis:list-browser-extensions',
+  scanBrowserExtensions: 'aegis:scan-browser-extensions',
+
+  // Modo incidente
+  triggerIncidentMode: 'aegis:trigger-incident-mode',
+
+  // Playbooks
+  listPlaybooks: 'aegis:list-playbooks',
+  savePlaybook: 'aegis:save-playbook',
+  deletePlaybook: 'aegis:delete-playbook',
+
+  // Auto-vigilancia de red propia
+  listSelfNetworkLog: 'aegis:list-self-network-log',
+
+  // Config-as-code
+  exportConfig: 'aegis:export-config',
+  importConfig: 'aegis:import-config',
+
+  // Insignia de score
+  getScoreBadgeSvg: 'aegis:get-score-badge-svg'
 } as const
 
 export interface QuarantineItem {

@@ -11,6 +11,8 @@ import { PersistenceView } from '@/components/persistence/PersistenceView'
 import { AlertsView } from '@/components/alerts/AlertsView'
 import { QuarantineView } from '@/components/quarantine/QuarantineView'
 import { SettingsView } from '@/components/settings/SettingsView'
+import { AiAssistantView } from '@/components/ai/AiAssistantView'
+import { CommandPalette } from '@/components/command/CommandPalette'
 
 const SECTION_TITLES: Record<string, string> = {
   dashboard: 'Panel general',
@@ -20,6 +22,7 @@ const SECTION_TITLES: Record<string, string> = {
   persistence: 'Puntos de autoarranque',
   alerts: 'Centro de alertas',
   quarantine: 'Cuarentena',
+  ai: 'Asistente IA',
   settings: 'Ajustes'
 }
 
@@ -27,13 +30,15 @@ export default function App() {
   const init = useAppStore((s) => s.init)
   const section = useAppStore((s) => s.section)
   const ready = useAppStore((s) => s.ready)
+  const presentationMode = useAppStore((s) => s.presentationMode)
 
   useEffect(() => {
     init()
   }, [init])
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className={presentationMode ? 'presentation-mode flex h-screen flex-col overflow-hidden' : 'flex h-screen flex-col overflow-hidden'}>
+      <CommandPalette />
       <TitleBar />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
@@ -53,6 +58,7 @@ export default function App() {
               {section === 'persistence' && <PersistenceView />}
               {section === 'alerts' && <AlertsView />}
               {section === 'quarantine' && <QuarantineView />}
+              {section === 'ai' && <AiAssistantView />}
               {section === 'settings' && <SettingsView />}
             </div>
           )}

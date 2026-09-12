@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Ban, CheckCircle2, Network, ShieldBan } from 'lucide-react'
+import { Ban, CheckCircle2, Network, ShieldBan, Sparkle } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { GlassCard, GlassCardHeader } from '@/components/ui/GlassCard'
 import clsx from 'clsx'
@@ -46,11 +46,18 @@ export function NetworkView() {
                   <p className="font-medium text-slate-200">{c.processName}</p>
                   <p className="text-xs text-slate-500">PID {c.pid} · {c.protocol.toUpperCase()}</p>
                 </td>
-                <td className="px-4 py-2.5 tabular-nums text-slate-400">{c.localAddress}:{c.localPort}</td>
-                <td className="px-4 py-2.5 tabular-nums text-slate-300">{c.remoteAddress ? `${c.remoteAddress}:${c.remotePort}` : '—'}</td>
+                <td data-sensitive="true" className="px-4 py-2.5 tabular-nums text-slate-400">{c.localAddress}:{c.localPort}</td>
+                <td data-sensitive="true" className="px-4 py-2.5 tabular-nums text-slate-300">{c.remoteAddress ? `${c.remoteAddress}:${c.remotePort}` : '—'}</td>
                 <td className="px-4 py-2.5 text-slate-400">{c.state}</td>
                 <td className={clsx('px-4 py-2.5 font-semibold tabular-nums', c.riskScore >= 40 ? 'text-aegis-red' : c.riskScore > 0 ? 'text-aegis-amber' : 'text-slate-500')}>
-                  {c.riskScore}
+                  <div className="flex items-center gap-1.5">
+                    {c.riskScore}
+                    {c.riskReasons.some((r) => r.includes('Primera conexion detectada')) && (
+                      <span title="Nunca visto antes: se desvia del patron habitual de este proceso" className="badge bg-aegis-violet/15 text-aegis-violet ring-1 ring-inset ring-aegis-violet/30">
+                        <Sparkle size={10} /> Nueva
+                      </span>
+                    )}
+                  </div>
                   {c.riskReasons[0] && <p className="mt-0.5 max-w-[240px] truncate text-[11px] font-normal text-slate-500">{c.riskReasons[0]}</p>}
                 </td>
                 <td className="px-4 py-2.5 text-right">

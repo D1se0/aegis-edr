@@ -20,7 +20,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron/main',
             rollupOptions: {
-              external: ['electron-store', 'electron-updater', 'systeminformation', 'chokidar', 'ps-list', 'sudo-prompt']
+              external: ['electron-store', 'electron-updater', 'systeminformation', 'chokidar', 'ps-list', 'sudo-prompt', 'archiver', '@anthropic-ai/sdk']
             }
           }
         }
