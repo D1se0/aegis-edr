@@ -1,0 +1,72 @@
+name: Sync release notes from CHANGELOG
+
+# Mantiene la descripcion de cada GitHub Release en sincronia con CHANGELOG.md:
+# - En un push a main: recorre TODAS las versiones documentadas y actualiza la
+#   release existente que corresponda a cada una (sirve tambien para rellenar
+#   retroactivamente releases ya publicadas que se quedaron sin descripcion).
+# - En un push de un tag vX.Y.Z (el que dispara release.yml): espera a que
+#   electron-builder cree la release con sus assets y luego le pone las notas.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determinar versiones a sincronizar
+        id: versions
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "versions=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            versions=$(grep -oE '^## *\[?v?[0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md \
+              | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' \
+              | sed 's/^/v/' \
+              | paste -sd' ' -)
+            echo "versions=$versions" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sincronizar notas de cada release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for tag in ${{ steps.versions.outputs.versions }}; do
+            echo "== $tag =="
+
+            if [ "${{ github.ref_type }}" = "tag" ]; then
+              # El build multi-OS de release.yml tarda 10-20 min en crear la
+              # release; esperamos hasta 30 min sondeando cada 30s.
+              found=0
+              for _ in $(seq 1 60); do
+                if gh release view "$tag" >/dev/null 2>&1; then
+                  found=1
+                  break
+                fi
+                sleep 30
+              done
+              if [ "$found" -ne 1 ]; then
+                echo "  release para $tag no aparecio a tiempo, se omite"
+                continue
+              fi
+            elif ! gh release view "$tag" >/dev/null 2>&1; then
+              echo "  no existe release publicada para $tag todavia, se omite"
+              continue
+            fi
+
+            python3 scripts/extract-changelog-section.py "$tag" > /tmp/notes.md
+            if [ -s /tmp/notes.md ]; then
+              gh release edit "$tag" --notes-file /tmp/notes.md --title "Aegis EDR ${tag#v}"
+              echo "  notas actualizadas"
+            else
+              echo "  sin entrada en CHANGELOG.md para $tag, se omite"
+            fi
+          done
