@@ -206,6 +206,11 @@ no hace nada, SmartScreen/Gatekeeper, "Beta proxima" en Descargas, personalizar 
 - **`watchPaths` personalizables solo por configuracion.** El monitor de integridad de ficheros
   vigila Escritorio/Documentos/Descargas por defecto; añadir rutas propias requiere editar
   `watchPaths` en el fichero de ajustes persistido, no hay todavia un editor visual en Ajustes.
+- **El build de macOS en CI solo produce artefactos `arm64`.** El runner `macos-latest` de GitHub
+  Actions es Apple Silicon; el target `x64` configurado en `app/package.json` no genera assets en
+  el Release publicado (probablemente necesita Rosetta/configuracion adicional para
+  cross-compilar). Pendiente de investigar y, si aplica, separar en dos jobs de matriz
+  (`macos-latest` para arm64 y un runner Intel o cross-build explicito para x64).
 - **Builds de Windows y macOS sin firmar/notarizar.** El pipeline de CI no tiene configurado un
   certificado de firma de codigo (Windows) ni un Apple Developer ID (macOS notarization), asi
   que SmartScreen y Gatekeeper muestran una advertencia la primera vez que se ejecuta el binario.
